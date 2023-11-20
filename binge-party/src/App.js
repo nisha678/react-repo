@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import StarRating from "./StarRating.js";
+import { useMovies } from "./useMovies.js";
+import { useLocalStorageState } from "./useLocalStorageState.js";
+import { useKey } from "./useKey.js";
 
 const tempMovieData = [
   {
@@ -55,16 +58,10 @@ const KEY = "90f7c193";
 
 export default function App() {
   const [query, setQuery] = useState("");
-  const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
   const [selectId, setSelectId] = useState(null);
+  const { movies, error, isLoading } = useMovies(query);
 
-  //const [watched, setWatched] = useState([]);
-  const [watched, setWatched] = useState(function () {
-    const storedValue = localStorage.getItem("watched");
-    return JSON.parse(storedValue);
-  });
+  const [watched, setWatched] = useLocalStorageState([], "watched");
 
   //checks synchronization queries for useEffects , as it
   // useEffect(function () {
@@ -102,66 +99,6 @@ export default function App() {
     setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
   }
 
-  useEffect(
-    function () {
-      localStorage.setItem("watched", JSON.stringify(watched));
-    },
-    [watched]
-  );
-
-  useEffect(
-    function () {
-      //below is for website not for js or react
-      const controller = new AbortController();
-
-      async function fetchMovies() {
-        try {
-          setIsLoading(true);
-          setError("");
-
-          const res = await fetch(
-            `http://www.omdbapi.com/?apikey=${KEY}&s=${query}`,
-            { signal: controller.signal }
-          );
-
-          if (!res.ok)
-            throw new Error("Something went Wrong with fetching movies");
-
-          const data = await res.json();
-
-          if (data.Response === "False") throw new Error("Movie not Found ☹ ");
-
-          setMovies(data.Search);
-          setError("");
-        } catch (err) {
-          setError(err.message);
-
-          if (err.name !== "AbortError") {
-            setError(err.message);
-          }
-        } finally {
-          setIsLoading(false);
-        }
-      }
-
-      if (query.length < 1) {
-        setMovies([]);
-        setError("");
-        return;
-      }
-      handleCloseMovie();
-      fetchMovies();
-
-      return function () {
-        controller.abort();
-      };
-    },
-    [
-      //dependency here
-      query,
-    ]
-  );
-
   return (
     <>
       <NavBar>
@@ -179,18 +116,18 @@ export default function App() {
               <WatchedSummary watched={watched} />
               <WatchedMovieList watched={watched} />
             </>
-          }
+          }  
         /> */}
         {/*  below is implicit : children prop */}
-        <Box>
+        <Box1>
           {/* {isLoading ? <Loader /> : <MovieList movies={movies} />} */}
           {isLoading && <Loader />}
           {!isLoading && !error && (
             <MovieList movies={movies} onSelect={handleSelectMovie} />
           )}
           {error && <ErrorMessage message={error} />}
-        </Box>
-        <Box>
+        </Box1>
+        <Box2>
           <>
             {selectId ? (
               <MovieDetails
@@ -209,7 +146,7 @@ export default function App() {
               </>
             )}
           </>
-        </Box>
+        </Box2>
       </Main>
     </>
   );
@@ -242,25 +179,11 @@ function ErrorMessage({ message }) {
 function Search({ query, setQuery }) {
   const inputEl = useRef(null);
 
-  useEffect(
-    function () {
-      function callback(e) {
-        //if (document.activeElement === inputEl.current) return;
-
-        if (e.code === "Enter") {
-          inputEl.current.focus();
-          //setQuery("");
-        }
-      }
-
-      document.addEventListener("keydown", callback);
-
-      //console.log(inputEl.current);
-
-      return () => document.addEventListener("keydown", callback);
-    },
-    [setQuery]
-  );
+  useKey("Enter", function () {
+    if (document.activeElement === inputEl.current) return;
+    inputEl.current.focus();
+    setQuery("");
+  });
 
   return (
     <input
@@ -286,7 +209,19 @@ function Main({ children }) {
   return <main className="main">{children}</main>;
 }
 
-function Box({ children }) {
+function Box1({ children }) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <div className="movie-main-box">
+      <button className="btn-toggle" onClick={() => setIsOpen((open) => !open)}>
+        {isOpen ? "–" : "+"}
+      </button>
+      {isOpen && children}
+    </div>
+  );
+}
+function Box2({ children }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -340,21 +275,7 @@ function MovieDetails({ selectId, onCloseMovie, onAddWatched, watched }) {
     //if (selectId === selectId) return;
   }
 
-  //for Escape keypress event
-  useEffect(
-    function () {
-      function callback(e) {
-        if (e.code === "Escape") {
-          onCloseMovie();
-        }
-      }
-      document.addEventListener("keydown", callback);
-      return function () {
-        document.removeEventListener("keydown", callback);
-      };
-    },
-    [onCloseMovie]
-  );
+  useKey("Escape", onCloseMovie);
 
   useEffect(
     function () {
