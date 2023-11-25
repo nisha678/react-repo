@@ -10,7 +10,10 @@ export default function App() {
   return (
     <div>
       <Steps />
-      <Steps />
+      <StepMessage>
+        <p>Pass in Content</p>
+        <p>🤑</p>
+      </StepMessage>
     </div>
   );
 }
@@ -38,25 +41,52 @@ function Steps() {
             <div className={step >= 2 ? "active" : ""}>2</div>
             <div className={step >= 3 ? "active" : ""}>3</div>
           </div>
-          <p className="message">
-            Step {step}:{messages[step - 1]}
-          </p>
+
+          <StepMessage step={step}>
+            {messages[step - 1]}
+            <div className="buttons">
+              <Button
+                bgColor="#e7e7e7"
+                textColor="#333"
+                onClick={() => alert(`Learn How To: ${messages[1]}`)}
+              >
+                Learn How!
+              </Button>
+            </div>
+          </StepMessage>
+
           <div className="buttons">
-            <button
-              style={{ backgroundColor: "#795198", color: "white" }}
-              onClick={handlePrevious}
-            >
-              Previous
-            </button>
-            <button
-              style={{ backgroundColor: "#795198", color: "white" }}
-              onClick={handleNext}
-            >
-              Next
-            </button>
+            <Button bgColor="#795198" textColor="#fff" onClick={handlePrevious}>
+              <span>👈</span>Previous
+            </Button>
+            <Button bgColor="#795198" textColor="#fff" onClick={handleNext}>
+              Next<span>👉</span>
+            </Button>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function StepMessage({ step, children }) {
+  return (
+    <div>
+      <p className="message">
+        <h3>Step {step}:</h3>
+        {children}
+      </p>
+    </div>
+  );
+}
+
+function Button({ textColor, bgColor, onClick, children }) {
+  return (
+    <button
+      style={{ backgroundColor: bgColor, color: textColor }}
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
